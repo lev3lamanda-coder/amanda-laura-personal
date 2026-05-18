@@ -588,12 +588,35 @@ footer {
   border-radius: 18px;
   background: rgba(255,255,255,.03);
 }
-.lv-login-logo {
-  height: 70px;
-  width: auto;
-  filter: invert(1);
-  mix-blend-mode: screen;
+.lv-login-logo-wrap {
+  background: rgba(255,255,255,.96);
+  border-radius: 14px;
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+.lv-login-logo { height: 58px; width: auto; }
+.lv-topbar-logo-wrap {
+  background: rgba(255,255,255,.9);
+  border-radius: 7px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+}
+.lv-mode-toggle {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,.32);
+  font-family: 'Poppins', sans-serif;
+  font-size: .68rem;
+  cursor: pointer;
+  padding: .55rem 0 0;
+  width: 100%;
+  text-align: center;
+  transition: color .2s;
+}
+.lv-mode-toggle:hover { color: rgba(255,255,255,.7); }
 .lv-login-title { text-align: center; }
 .lv-login-title h2 {
   font-size: 1.05rem;
@@ -661,13 +684,7 @@ footer {
   flex-wrap: wrap;
 }
 .lv-topbar-left { display: flex; align-items: center; gap: .9rem; }
-.lv-topbar-logo {
-  height: 30px;
-  width: auto;
-  filter: invert(1);
-  mix-blend-mode: screen;
-  opacity: .85;
-}
+.lv-topbar-logo { height: 24px; width: auto; }
 .lv-topbar-ttl { font-size: .9rem; font-weight: 600; color: #F0F2F8; }
 .lv-topbar-sub { font-size: .6rem; color: rgba(255,255,255,.35); font-weight: 300; }
 .lv-topbar-right { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
@@ -1151,17 +1168,35 @@ footer {
   <!-- Tela de login -->
   <div id="lv-login-screen">
     <div class="lv-login-card">
-      <img src="assets/logo-lv.png" alt="LV Business Club" class="lv-login-logo">
+      <div class="lv-login-logo-wrap">
+        <img src="assets/logo-full.png" alt="Amanda Laura Personal Trainer" class="lv-login-logo">
+      </div>
       <div class="lv-login-title">
         <h2>Painel Analítico</h2>
         <p>Amanda Laura Personal Trainer</p>
       </div>
-      <form class="lv-login-form" id="lv-login-form">
-        <input type="email" id="lv-email" placeholder="E-mail administrativo" autocomplete="email" required>
-        <input type="password" id="lv-pass" placeholder="Senha" autocomplete="current-password" required>
-        <p class="lv-login-err" id="lv-login-err"></p>
-        <button type="submit" class="lv-login-btn">Entrar →</button>
-      </form>
+
+      <!-- Modo: entrar -->
+      <div id="lv-mode-login">
+        <form class="lv-login-form" id="lv-login-form">
+          <input type="email" id="lv-email" placeholder="E-mail administrativo" autocomplete="email" required>
+          <input type="password" id="lv-pass" placeholder="Senha" autocomplete="current-password" required>
+          <p class="lv-login-err" id="lv-login-err"></p>
+          <button type="submit" class="lv-login-btn">Entrar →</button>
+        </form>
+        <button class="lv-mode-toggle" onclick="setMode('register')">+ Criar conta admin</button>
+      </div>
+
+      <!-- Modo: criar admin -->
+      <div id="lv-mode-register" style="display:none">
+        <form class="lv-login-form" id="lv-register-form">
+          <input type="email" id="lv-reg-email" placeholder="E-mail do novo admin" autocomplete="off" required>
+          <input type="password" id="lv-reg-pass" placeholder="Senha (mínimo 6 caracteres)" autocomplete="new-password" required>
+          <p class="lv-login-err" id="lv-register-err"></p>
+          <button type="submit" class="lv-login-btn">Criar Admin →</button>
+        </form>
+        <button class="lv-mode-toggle" onclick="setMode('login')">← Voltar ao login</button>
+      </div>
     </div>
   </div>
 
@@ -1169,7 +1204,9 @@ footer {
   <div id="lv-dash">
     <div class="lv-topbar">
       <div class="lv-topbar-left">
-        <img src="assets/logo-lv.png" alt="LV Business Club" class="lv-topbar-logo">
+        <div class="lv-topbar-logo-wrap">
+          <img src="assets/logo-full.png" alt="Amanda Laura Personal Trainer" class="lv-topbar-logo">
+        </div>
         <div>
           <div class="lv-topbar-ttl">Painel Analítico</div>
           <div class="lv-topbar-sub">Amanda Laura Personal Trainer</div>
@@ -1492,6 +1529,40 @@ function loadScript(src) {
     document.head.appendChild(s);
   });
 }
+
+// Alterna entre modos login / criar admin
+function setMode(mode) {
+  document.getElementById('lv-mode-login').style.display    = mode === 'login'    ? 'block' : 'none';
+  document.getElementById('lv-mode-register').style.display = mode === 'register' ? 'block' : 'none';
+  document.getElementById('lv-login-err').textContent    = '';
+  document.getElementById('lv-register-err').textContent = '';
+}
+
+// Criar admin
+document.getElementById('lv-register-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn   = this.querySelector('button');
+  const errEl = document.getElementById('lv-register-err');
+  btn.textContent = 'Criando…'; btn.disabled = true; errEl.textContent = ''; errEl.style.color = '#F5A030';
+  try {
+    const r = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email:    document.getElementById('lv-reg-email').value,
+        password: document.getElementById('lv-reg-pass').value,
+      })
+    });
+    const json = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(json.error || 'Erro ao criar conta.');
+    errEl.style.color = '#70C9C4';
+    errEl.textContent = '✓ Admin criado! Redirecionando para login…';
+    setTimeout(() => { setMode('login'); document.getElementById('lv-reg-email').value = ''; document.getElementById('lv-reg-pass').value = ''; }, 1800);
+  } catch(err) {
+    errEl.textContent = err.message;
+    btn.textContent = 'Criar Admin →'; btn.disabled = false;
+  }
+});
 
 // Login — /api/login no servidor; nenhuma chave exposta no browser
 document.getElementById('lv-login-form').addEventListener('submit', async function (e) {
