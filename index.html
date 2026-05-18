@@ -578,27 +578,19 @@ footer {
 }
 .lv-login-card {
   width: 100%;
-  max-width: 360px;
-  padding: 2.5rem 2rem 2rem;
+  max-width: 380px;
+  padding: 2.4rem 2rem 2rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.4rem;
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 18px;
-  background: rgba(255,255,255,.03);
+  gap: 1.3rem;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(0,0,0,.5);
 }
-.lv-login-logo-wrap {
-  background: rgba(255,255,255,.96);
-  border-radius: 14px;
-  padding: 10px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.lv-login-logo { height: 58px; width: auto; }
+.lv-login-logo { height: 90px; width: auto; }
 .lv-topbar-logo-wrap {
-  background: rgba(255,255,255,.9);
+  background: rgba(255,255,255,.92);
   border-radius: 7px;
   padding: 4px 10px;
   display: flex;
@@ -607,7 +599,7 @@ footer {
 .lv-mode-toggle {
   background: none;
   border: none;
-  color: rgba(255,255,255,.32);
+  color: rgba(0,0,0,.35);
   font-family: 'Poppins', sans-serif;
   font-size: .68rem;
   cursor: pointer;
@@ -616,17 +608,17 @@ footer {
   text-align: center;
   transition: color .2s;
 }
-.lv-mode-toggle:hover { color: rgba(255,255,255,.7); }
+.lv-mode-toggle:hover { color: rgba(0,0,0,.75); }
 .lv-login-title { text-align: center; }
 .lv-login-title h2 {
   font-size: 1.05rem;
   font-weight: 600;
-  color: #F0F2F8;
+  color: #111;
   margin-bottom: .25rem;
 }
 .lv-login-title p {
   font-size: .7rem;
-  color: rgba(255,255,255,.35);
+  color: rgba(0,0,0,.4);
   font-weight: 300;
 }
 .lv-login-form {
@@ -638,17 +630,17 @@ footer {
 .lv-login-form input {
   width: 100%;
   padding: .82rem 1rem;
-  background: rgba(255,255,255,.05);
-  border: 1px solid rgba(255,255,255,.09);
+  background: #f4f5f7;
+  border: 1px solid rgba(0,0,0,.1);
   border-radius: 9px;
-  color: #F0F2F8;
+  color: #111;
   font-family: 'Poppins', sans-serif;
   font-size: .84rem;
   outline: none;
   transition: border-color .2s;
 }
-.lv-login-form input:focus { border-color: rgba(112,201,196,.45); }
-.lv-login-form input::placeholder { color: rgba(255,255,255,.28); }
+.lv-login-form input:focus { border-color: rgba(112,201,196,.7); }
+.lv-login-form input::placeholder { color: rgba(0,0,0,.32); }
 .lv-login-err {
   font-size: .7rem;
   color: #F5A030;
@@ -1168,9 +1160,7 @@ footer {
   <!-- Tela de login -->
   <div id="lv-login-screen">
     <div class="lv-login-card">
-      <div class="lv-login-logo-wrap">
-        <img src="assets/logo-full.png" alt="Amanda Laura Personal Trainer" class="lv-login-logo">
-      </div>
+      <img src="assets/logo-full.png" alt="Amanda Laura Personal Trainer" class="lv-login-logo">
       <div class="lv-login-title">
         <h2>Painel Analítico</h2>
         <p>Amanda Laura Personal Trainer</p>
@@ -1620,9 +1610,10 @@ async function loadDashboard() {
   const dataEl  = document.getElementById('lv-data');
   loading.style.display = 'flex'; dataEl.style.display = 'none';
 
-  const since = new Date();
-  since.setDate(since.getDate() - _filter + 1);
-  const sinceStr = since.toISOString().slice(0, 10);
+  // Data em BRT (UTC-3) — consistente com o que é gravado no banco
+  const brtNow = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  brtNow.setUTCDate(brtNow.getUTCDate() - _filter + 1);
+  const sinceStr = brtNow.toISOString().slice(0, 10);
 
   const res = await fetch('/api/analytics?since=' + sinceStr, {
     headers: { 'Authorization': 'Bearer ' + _adminToken }

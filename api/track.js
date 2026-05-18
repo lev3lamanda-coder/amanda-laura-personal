@@ -3,6 +3,11 @@ const ALLOWED_CLICKS = new Set([
   'CTA Hero', 'Plano Trimestral', 'Plano Semestral', 'Plano Anual', 'Ver Planos',
 ]);
 
+// Data no fuso de Brasília (UTC-3) — meia-noite BRT = 03:00 UTC
+function brazilDate() {
+  return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
@@ -29,6 +34,7 @@ module.exports = async function handler(req, res) {
         session_id,
         event_type,
         event_name: event_name || null,
+        date: brazilDate(),   // sempre data BRT — reset à meia-noite de Brasília
       }),
     });
     res.status(r.ok ? 200 : 502).end();
