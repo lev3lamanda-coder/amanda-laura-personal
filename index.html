@@ -1171,18 +1171,6 @@ footer {
           <p class="lv-login-err" id="lv-login-err"></p>
           <button type="submit" class="lv-login-btn">Entrar →</button>
         </form>
-        <button class="lv-mode-toggle" onclick="setMode('register')">+ Criar conta admin</button>
-      </div>
-
-      <!-- Modo: criar admin -->
-      <div id="lv-mode-register" style="display:none">
-        <form class="lv-login-form" id="lv-register-form">
-          <input type="email" id="lv-reg-email" placeholder="E-mail do novo admin" autocomplete="off" required>
-          <input type="password" id="lv-reg-pass" placeholder="Senha (mínimo 6 caracteres)" autocomplete="new-password" required>
-          <p class="lv-login-err" id="lv-register-err"></p>
-          <button type="submit" class="lv-login-btn">Criar Admin →</button>
-        </form>
-        <button class="lv-mode-toggle" onclick="setMode('login')">← Voltar ao login</button>
       </div>
     </div>
   </div>
@@ -1546,39 +1534,7 @@ function loadScript(src) {
   });
 }
 
-// Alterna entre modos login / criar admin
-function setMode(mode) {
-  document.getElementById('lv-mode-login').style.display    = mode === 'login'    ? 'block' : 'none';
-  document.getElementById('lv-mode-register').style.display = mode === 'register' ? 'block' : 'none';
-  document.getElementById('lv-login-err').textContent    = '';
-  document.getElementById('lv-register-err').textContent = '';
-}
 
-// Criar admin
-document.getElementById('lv-register-form').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const btn   = this.querySelector('button');
-  const errEl = document.getElementById('lv-register-err');
-  btn.textContent = 'Criando…'; btn.disabled = true; errEl.textContent = ''; errEl.style.color = '#F5A030';
-  try {
-    const r = await fetch('/api/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email:    document.getElementById('lv-reg-email').value,
-        password: document.getElementById('lv-reg-pass').value,
-      })
-    });
-    const json = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(json.error || 'Erro ao criar conta.');
-    errEl.style.color = '#70C9C4';
-    errEl.textContent = '✓ Admin criado! Redirecionando para login…';
-    setTimeout(() => { setMode('login'); document.getElementById('lv-reg-email').value = ''; document.getElementById('lv-reg-pass').value = ''; }, 1800);
-  } catch(err) {
-    errEl.textContent = err.message;
-    btn.textContent = 'Criar Admin →'; btn.disabled = false;
-  }
-});
 
 // Login — /api/login no servidor; nenhuma chave exposta no browser
 document.getElementById('lv-login-form').addEventListener('submit', async function (e) {
