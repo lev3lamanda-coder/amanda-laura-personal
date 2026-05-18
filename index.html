@@ -1399,13 +1399,8 @@ footer {
 </div>
 
 <script>
-/* ─── Supabase config (preencher após criar projeto) ─── */
-const SUPA_URL = 'SEU_PROJETO_SUPABASE_URL';
-const SUPA_KEY = 'SUA_CHAVE_ANONIMA_AQUI';
-
 /* ─── Tracking de visitas e cliques ─── */
 (function () {
-  // ID de sessão único por aba — evita contar recarregamentos como visitas novas
   const SID = (() => {
     let id = sessionStorage.getItem('_lv');
     if (!id) {
@@ -1417,15 +1412,9 @@ const SUPA_KEY = 'SUA_CHAVE_ANONIMA_AQUI';
   })();
 
   function track(type, name) {
-    if (!SUPA_URL || SUPA_URL.includes('SEU_')) return;
-    fetch(SUPA_URL + '/rest/v1/analytics_events', {
+    fetch('/api/track', {
       method: 'POST',
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': 'Bearer ' + SUPA_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: SID, event_type: type, event_name: name || null })
     }).catch(() => {});
   }
@@ -1484,7 +1473,7 @@ const SUPA_KEY = 'SUA_CHAVE_ANONIMA_AQUI';
 })();
 
 /* ─── Analytics Panel ─── */
-let _sb = null, _charts = {}, _filter = 7;
+let _adminToken = null, _charts = {}, _filter = 7;
 
 function openAnalytics() {
   document.getElementById('analytics-overlay').classList.add('active');
@@ -1504,45 +1493,42 @@ function loadScript(src) {
   });
 }
 
-async function getSb() {
-  if (_sb) return _sb;
-  await Promise.all([
-    loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'),
-    loadScript('https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js')
-  ]);
-  _sb = supabase.createClient(SUPA_URL, SUPA_KEY);
-  return _sb;
-}
-
-// Login
+// Login — /api/login no servidor; nenhuma chave exposta no browser
 document.getElementById('lv-login-form').addEventListener('submit', async function (e) {
   e.preventDefault();
   const btn = this.querySelector('button');
   const errEl = document.getElementById('lv-login-err');
   btn.textContent = 'Entrando…'; btn.disabled = true; errEl.textContent = '';
   try {
-    const sb = await getSb();
-    const { error } = await sb.auth.signInWithPassword({
-      email: document.getElementById('lv-email').value,
-      password: document.getElementById('lv-pass').value
+    const r = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: document.getElementById('lv-email').value,
+        password: document.getElementById('lv-pass').value
+      })
     });
-    if (error) throw error;
+    if (!r.ok) throw new Error();
+    const { token } = await r.json();
+    _adminToken = token;
     document.getElementById('lv-login-screen').style.display = 'none';
     document.getElementById('lv-dash').style.display = 'flex';
-    loadDashboard(sb);
+    await loadScript('https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js');
+    loadDashboard();
   } catch {
     errEl.textContent = 'E-mail ou senha inválidos.';
     btn.textContent = 'Entrar →'; btn.disabled = false;
   }
 });
 
-// Logout
-document.getElementById('lv-logout').addEventListener('click', async () => {
-  if (_sb) await _sb.auth.signOut();
+// Logout — apaga token da memória
+document.getElementById('lv-logout').addEventListener('click', () => {
+  _adminToken = null;
   document.getElementById('lv-login-screen').style.display = 'flex';
   document.getElementById('lv-dash').style.display = 'none';
   document.getElementById('lv-email').value = '';
   document.getElementById('lv-pass').value = '';
+  document.getElementById('lv-login-err').textContent = '';
   Object.values(_charts).forEach(c => c.destroy());
   _charts = {};
   closeAnalytics();
@@ -1554,11 +1540,11 @@ document.querySelectorAll('.lv-filter-btn').forEach(btn => {
     document.querySelectorAll('.lv-filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     _filter = parseInt(btn.dataset.days);
-    if (_sb) loadDashboard(_sb);
+    if (_adminToken) loadDashboard();
   });
 });
 
-async function loadDashboard(sb) {
+async function loadDashboard() {
   const loading = document.getElementById('lv-loading');
   const dataEl  = document.getElementById('lv-data');
   loading.style.display = 'flex'; dataEl.style.display = 'none';
@@ -1567,12 +1553,21 @@ async function loadDashboard(sb) {
   since.setDate(since.getDate() - _filter + 1);
   const sinceStr = since.toISOString().slice(0, 10);
 
-  const { data, error } = await sb
-    .from('analytics_events')
-    .select('session_id, event_type, event_name, date')
-    .gte('date', sinceStr);
+  const res = await fetch('/api/analytics?since=' + sinceStr, {
+    headers: { 'Authorization': 'Bearer ' + _adminToken }
+  });
 
-  if (error || !data) { loading.style.display = 'none'; return; }
+  if (!res.ok) {
+    document.getElementById('lv-login-err').textContent = 'Sessão expirada. Faça login novamente.';
+    document.getElementById('lv-login-screen').style.display = 'flex';
+    document.getElementById('lv-dash').style.display = 'none';
+    loading.style.display = 'none';
+    _adminToken = null;
+    return;
+  }
+
+  const data = await res.json();
+  if (!Array.isArray(data)) { loading.style.display = 'none'; return; }
 
   // Agrega dados — sem duplicações por sessão
   const pageviews = data.filter(e => e.event_type === 'pageview');
